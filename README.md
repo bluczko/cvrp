@@ -1,7 +1,7 @@
 # CVRP Project
 Practical implementation of Constrained Vehicle Routing Problem.
 
-This is a students project for Systems Engineering course.
+This is a student project for Systems Engineering course.
 
 ## Installation
 
@@ -15,7 +15,7 @@ pip install -r requirements.txt
 ## Solvers
 Additionally, this project requires installation of any MLP solver supported by Pyomo. 
 
-GLPS was used in testing, but Gurobi or CPLEX is recommended for performance reasons.
+GLPK was used in testing, but Gurobi or CPLEX is recommended for performance reasons.
 
 Full list of supported solvers is available from pyomo command (after installation):
 ```
