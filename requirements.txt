@@ -1,0 +1,5 @@
+numpy==1.16.2
+Pyomo==5.7.1
+Faker==4.0.1
+pytest==3.10.1
+unicode_slugify==0.1.3
