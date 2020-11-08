@@ -1,5 +1,3 @@
-from math import ceil
-
 import pytest
 import random
 from faker import Faker
@@ -8,6 +6,7 @@ from cvrp.data import Place, Vehicle, Network
 
 
 fake = Faker()
+Faker.seed(42)
 
 
 @pytest.fixture
@@ -38,7 +37,7 @@ def vehicle():
 
 
 @pytest.fixture
-def network():
+def network(num_clients=10, num_vehicles=4):
     net = Network()
 
     net.depot = Place(
@@ -47,8 +46,6 @@ def network():
         lon=fake.longitude()
     )
 
-    num_clients = 8
-
     for i in range(num_clients):
         net.add_client(Place(
             name=fake.city(),
@@ -56,8 +53,6 @@ def network():
             lon=fake.longitude(),
             demand=20 + 5 * (i % 2)
         ))
-
-    num_vehicles = 4
 
     for i in range(num_vehicles):
         net.add_vehicle(Vehicle(
