@@ -105,7 +105,7 @@ class Vehicle:
 
 class Network:
     def __init__(self):
-        self.__depot = Place("Central depot", 0.0, 0.0)
+        self.__depot = Place("Magazyn centralny", 0.0, 0.0)
         self.__clients = []
         self.__vehicles = []
 
@@ -125,7 +125,7 @@ class Network:
         return self.__clients
 
     @property
-    def all_places(self):
+    def all_places(self) -> [Place]:
         return [self.depot] + [c for c in self.clients]
 
     @property
