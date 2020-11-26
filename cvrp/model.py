@@ -10,6 +10,9 @@ def compose_cvrp_model(network: Network):
     if sum(v.max_capacity for v in network.vehicles) < sum(c.demand for c in network.clients):
         raise ValueError("Problem not solvable: sum of vehicle capacities is lesser than sum of clients demands")
 
+    if max(v.max_capacity for v in network.vehicles) < max(c.demand for c in network.clients):
+        raise ValueError("Problem not solvable: max vehicle capacity is lesser than biggest demand")
+
     model = ConcreteModel()
 
     # Sets definitons #####################################
