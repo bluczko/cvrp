@@ -6,6 +6,7 @@ from pyomo.core import ConcreteModel
 from pyomo.opt import check_optimal_termination
 
 from cvrp.data import Place
+from cvrp.exceptions import CVRPException
 from cvrp.model import compose_cvrp_model, solve_cvrp, cvrp_results
 
 
@@ -29,7 +30,7 @@ def test_unsolvable_model(network):
     for client in overdemanding_clients:
         network.add_client(client)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(CVRPException):
         compose_cvrp_model(network)
 
 

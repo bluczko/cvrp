@@ -3,6 +3,8 @@ import sys
 from PyQt5.QtWidgets import *
 
 from cvrp.data import Network, Place, Vehicle
+from cvrp.exceptions import CVRPException
+from cvrp.model import get_solvers
 from cvrp.ui.places import PlaceFormWindow
 from cvrp.ui.vehicles import VehicleFormWindow
 
@@ -40,7 +42,7 @@ class ListTabWidget(QWidget):
 
         self.ab_layout.addStretch()
 
-        # Places list #####################################
+        # Items list #####################################
         self.items_list = self.list_class(network=self._network)
         self.layout.addWidget(self.items_list)
 
@@ -100,23 +102,27 @@ class PlaceList(QListWidget):
 class PlacesTabWidget(ListTabWidget):
     list_class = PlaceList
 
+    def __on_editor_close(self):
+        self.items_list.update_places()
+        self.update_action_buttons(None)
+
     def on_item_add(self):
         new_index = len(self._network.clients) + 1
         new_place = Place(f"Nowy klient ({new_index})", 0.0, 0.0)
         self._network.add_client(new_place)
 
         form_window = PlaceFormWindow(self, place=new_place)
-        form_window.set_on_close(self.items_list.update_places)
+        form_window.set_on_close(self.__on_editor_close)
         form_window.show()
 
     def on_item_edit(self, item):
         form_window = PlaceFormWindow(self, place=item.place, is_depot=(item.place == self._network.depot))
-        form_window.set_on_close(self.items_list.update_places)
+        form_window.set_on_close(self.__on_editor_close)
         form_window.show()
 
     def on_item_remove(self, item):
         self._network.remove_client(item.place)
-        self.items_list.update_places()
+        self.__on_editor_close()
 
     def update_action_buttons(self, item):
         super().update_action_buttons(item)
@@ -150,23 +156,27 @@ class VehicleList(QListWidget):
 class VehiclesTabWidget(ListTabWidget):
     list_class = VehicleList
 
+    def __on_editor_close(self):
+        self.items_list.update_vehicles()
+        self.update_action_buttons(None)
+
     def on_item_add(self):
         new_index = len(self._network.vehicles) + 1
         new_vehicle = Vehicle(f"Nowy pojazd ({new_index})", 1.0)
         self._network.add_vehicle(new_vehicle)
 
         form_window = VehicleFormWindow(self, vehicle=new_vehicle)
-        form_window.set_on_close(self.items_list.update_vehicles)
+        form_window.set_on_close(self.__on_editor_close)
         form_window.show()
 
     def on_item_edit(self, item):
         form_window = VehicleFormWindow(self, vehicle=item.vehicle)
-        form_window.set_on_close(self.items_list.update_vehicles)
+        form_window.set_on_close(self.__on_editor_close)
         form_window.show()
 
     def on_item_remove(self, item):
         self._network.remove_vehicle(item.vehicle)
-        self.items_list.update_places()
+        self.__on_editor_close()
 
 
 class MainTabWidget(QTabWidget):
@@ -183,6 +193,20 @@ class MainTabWidget(QTabWidget):
 
 
 class MainWidget(QWidget):
+    def on_click_solve(self):
+        self.solve.setDisabled(True)
+
+        try:
+            self._network.check_solvability()
+        except CVRPException as exc:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setWindowTitle("Błąd")
+            msg.setText(exc.message)
+            msg.exec_()
+
+        self.solve.setDisabled(False)
+
     def __init__(self, *args, **kwargs):
         self._network = kwargs.pop("network")
 
@@ -195,6 +219,7 @@ class MainWidget(QWidget):
         self.layout.addWidget(self.tabs)
 
         self.solve = QPushButton("Rozwiąż problem")
+        self.solve.clicked.connect(self.on_click_solve)
         self.layout.addWidget(self.solve)
 
 
@@ -204,15 +229,26 @@ class MainWindow(QMainWindow):
 
         super(MainWindow, self).__init__(*args, **kwargs)
 
-        self.setWindowTitle("CVRP")
+        self.setWindowTitle("Problem marszrutyzacji")
         self.setFixedSize(600, 400)
 
         self.main_widget = MainWidget(self, network=self._network)
         self.setCentralWidget(self.main_widget)
 
 
-if __name__ == "__main__":
+def launch_ui():
     app = QApplication(sys.argv)
     main = MainWindow()
+
+    try:
+        get_solvers()
+    except EnvironmentError:
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Critical)
+        msg.setWindowTitle("Błąd")
+        msg.setText("Brak dostępnych solverów")
+        msg.exec_()
+        return
+
     main.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

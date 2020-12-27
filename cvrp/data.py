@@ -1,6 +1,7 @@
 from slugify import slugify
 from numpy import clip
 
+from cvrp.exceptions import *
 from cvrp.geo import geo_dist
 
 
@@ -126,7 +127,7 @@ class Network:
 
     @property
     def all_places(self) -> [Place]:
-        return [self.depot] + [c for c in self.clients]
+        return [self.depot] + self.clients
 
     @property
     def vehicles(self) -> [Vehicle]:
@@ -147,3 +148,27 @@ class Network:
     def remove_vehicle(self, vehicle: Vehicle):
         if vehicle in self.__vehicles:
             self.__vehicles.remove(vehicle)
+
+    def check_solvability(self):
+        if len(self.clients) == 0:
+            raise NoClientsException()
+
+        if len(self.vehicles) == 0:
+            raise NoVehiclesException()
+
+        demands = [c.demand for c in self.clients]
+        capacities = [v.max_capacity for v in self.vehicles]
+
+        if sum(capacities) < sum(demands):
+            raise SumCapacityOverloadException()
+
+        if max(capacities) < max(demands):
+            raise MaxCapacityOverloadException()
+
+    def is_solvable(self):
+        try:
+            self.check_solvability()
+        except CVRPException:
+            return False
+
+        return True

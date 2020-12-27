@@ -7,11 +7,7 @@ from cvrp.data import Network, Place
 
 def compose_cvrp_model(network: Network):
     # Check if problem is solvable at all
-    if sum(v.max_capacity for v in network.vehicles) < sum(c.demand for c in network.clients):
-        raise ValueError("Problem not solvable: sum of vehicle capacities is lesser than sum of clients demands")
-
-    if max(v.max_capacity for v in network.vehicles) < max(c.demand for c in network.clients):
-        raise ValueError("Problem not solvable: max vehicle capacity is lesser than biggest demand")
+    network.check_solvability()
 
     model = ConcreteModel()
 
@@ -130,8 +126,7 @@ def compose_cvrp_model(network: Network):
     return model
 
 
-def solve_cvrp(network: Network, solvers_tried: [str] = None):
-
+def get_solvers(solvers_tried: [str] = None):
     # Supply default argument
     if not solvers_tried:
         solvers_tried = ["gurobi", "cplex", "glpk"]
@@ -140,6 +135,12 @@ def solve_cvrp(network: Network, solvers_tried: [str] = None):
 
     if len(available_solvers) == 0:
         raise EnvironmentError("No solvers available")
+
+    return available_solvers
+
+
+def solve_cvrp(network: Network, solvers_tried: [str] = None):
+    available_solvers = get_solvers(solvers_tried)
 
     # Get first available solver and solve the model
     solver = SolverFactory(available_solvers[0])
