@@ -1,7 +1,6 @@
-from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 
-from cvrp.data import Place
+from cvrp.ui.mixins import OnCloseCallbackMixin
 
 
 class PlaceFormWidget(QWidget):
@@ -9,7 +8,7 @@ class PlaceFormWidget(QWidget):
         self._place = kwargs.pop("place")
         self._is_depot = kwargs.pop("is_depot", False)
 
-        super(PlaceFormWidget, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.layout = QFormLayout()
         self.setLayout(self.layout)
@@ -48,12 +47,13 @@ class PlaceFormWidget(QWidget):
         self._place.longitude = self.lng_input.value()
         self._place.demand = 0.0 if self._is_depot else self.demand_input.value()
 
-        self.window().on_close()
         self.window().close()
 
 
-class PlaceFormWindow(QMainWindow):
-    __on_close_callback = None
+class PlaceFormWindow(OnCloseCallbackMixin, QMainWindow):
+    def closeEvent(self, event):
+        self.on_close()
+        super().closeEvent(event)
 
     def __init__(self, *args, **kwargs):
         self._place = kwargs.pop("place")
@@ -66,10 +66,3 @@ class PlaceFormWindow(QMainWindow):
 
         self.main_widget = PlaceFormWidget(place=self._place, is_depot=self._is_depot)
         self.setCentralWidget(self.main_widget)
-
-    def set_on_close(self, callback: callable):
-        self.__on_close_callback = callback
-
-    def on_close(self):
-        if self.__on_close_callback is not None:
-            self.__on_close_callback()
