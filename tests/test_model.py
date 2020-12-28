@@ -7,7 +7,7 @@ from pyomo.opt import check_optimal_termination
 
 from cvrp.data import Place
 from cvrp.exceptions import CVRPException
-from cvrp.model import compose_cvrp_model, solve_cvrp, cvrp_results
+from cvrp.model import CVRPModel, solve
 
 
 def test_compose_cvrp_model(network):
@@ -15,7 +15,7 @@ def test_compose_cvrp_model(network):
     Checks if compose_cvrp_model returns a valid Pyomo model of type ConcreteModel
     """
 
-    model = compose_cvrp_model(network)
+    model = CVRPModel(network)
     assert isinstance(model, ConcreteModel), \
         "compose_cvrp_model should return instance of ConcreteModel"
 
@@ -31,7 +31,7 @@ def test_unsolvable_model(network):
         network.add_client(client)
 
     with pytest.raises(CVRPException):
-        compose_cvrp_model(network)
+        CVRPModel(network)
 
 
 def test_solve_cvrp_optimal(network):
@@ -39,7 +39,7 @@ def test_solve_cvrp_optimal(network):
     Checks if solved model returns optimal solution flag.
     """
 
-    model, result = solve_cvrp(network)
+    result = solve(CVRPModel(network))
     assert check_optimal_termination(result), \
         "solve_cvrp should return optimal results for example network"
 
@@ -49,7 +49,9 @@ def test_solve_cvrp_sanity(network):
     Checks if solved model returns logical and practically executable solution.
     """
 
-    model, result = solve_cvrp(network)
+    model = CVRPModel(network)
+    result = solve(model)
+
     _depot = network.depot.slug_name
 
     # Is every place visited?
@@ -72,7 +74,11 @@ def test_cvrp_results(network):
     Checks if cvrp_results returns valid dict structure containing vehicle routes.
     """
 
-    vehicle_vars = cvrp_results(network)
+    model = CVRPModel(network)
+
+    solve(model)
+
+    vehicle_vars = model.results()
 
     for vehicle in network.vehicles:
         assert vehicle.slug_name in vehicle_vars, \
