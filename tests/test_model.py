@@ -1,13 +1,9 @@
 from pprint import pprint
 
-import pytest
-
 from pyomo.core import ConcreteModel
 from pyomo.opt import check_optimal_termination
 
-from cvrp.data import Place
-from cvrp.exceptions import CVRPException
-from cvrp.model import CVRPModel, solve
+from cvrp.model import CVRPModel, solve_model
 
 
 def test_compose_cvrp_model(network):
@@ -20,26 +16,12 @@ def test_compose_cvrp_model(network):
         "compose_cvrp_model should return instance of ConcreteModel"
 
 
-def test_unsolvable_model(network):
-    """
-    Checks if compose_cvrp_model raises exception, when user tries to solve logically impossible problem.
-    """
-
-    overdemanding_clients = [Place(f"whatever-{i}", 0.0, 0.0, 10000) for i in range(3)]
-
-    for client in overdemanding_clients:
-        network.add_client(client)
-
-    with pytest.raises(CVRPException):
-        CVRPModel(network)
-
-
 def test_solve_cvrp_optimal(network):
     """
     Checks if solved model returns optimal solution flag.
     """
 
-    result = solve(CVRPModel(network))
+    result = solve_model(CVRPModel(network))
     assert check_optimal_termination(result), \
         "solve_cvrp should return optimal results for example network"
 
@@ -50,7 +32,7 @@ def test_solve_cvrp_sanity(network):
     """
 
     model = CVRPModel(network)
-    result = solve(model)
+    result = solve_model(model)
 
     _depot = network.depot.slug_name
 
@@ -76,7 +58,7 @@ def test_cvrp_results(network):
 
     model = CVRPModel(network)
 
-    solve(model)
+    solve_model(model)
 
     vehicle_vars = model.results()
 

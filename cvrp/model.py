@@ -11,8 +11,6 @@ class CVRPModel(ConcreteModel):
 
         self.network = network
 
-        network.check_solvability()
-        
         # Sets definitons #####################################
 
         self.clients = Set(initialize=[p.slug_name for p in network.clients], doc="Clients")
@@ -184,7 +182,7 @@ def get_solvers(solvers_tried: [str] = None):
     return available_solvers
 
 
-def solve(model: CVRPModel, solvers_tried: [str] = None):
+def solve_model(model: CVRPModel, solvers_tried: [str] = None):
     available_solvers = get_solvers(solvers_tried)
     solver = SolverFactory(available_solvers[0])
     return solver.solve(model)

@@ -1,10 +1,11 @@
 import sys
 
+from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
 from cvrp.data import Network, Place, Vehicle
 from cvrp.exceptions import CVRPException
-from cvrp.model import get_solvers
+from cvrp.model import get_solvers, solve_model, CVRPModel
 from cvrp.ui.places import PlaceFormWindow
 from cvrp.ui.vehicles import VehicleFormWindow
 
@@ -192,12 +193,39 @@ class MainTabWidget(QTabWidget):
         self.addTab(self.vehicles_tab, "Pojazdy")
 
 
+class ModelSolveRunnable(QRunnable):
+    def __init__(self, progress_bar, network):
+        super().__init__()
+        self.bar = progress_bar
+        self.network = network
+
+    def set_bar_value(self, value: int):
+        QMetaObject.invokeMethod(self.bar, "setValue", Qt.QueuedConnection, Q_ARG(int, value))
+
+    def run(self):
+        self.set_bar_value(0)
+
+        model = CVRPModel(self.network)
+        self.set_bar_value(1)
+
+        solve_model(model)
+        self.set_bar_value(2)
+
+
 class MainWidget(QWidget):
     def on_click_solve(self):
         self.solve.setDisabled(True)
 
         try:
             self._network.check_solvability()
+
+            dialog = QProgressDialog("Rozwiązywanie problemu...", "", 0, 2, self)
+            dialog.setWindowModality(Qt.WindowModal)
+            dialog.show()
+
+            runnable = ModelSolveRunnable(dialog, self._network)
+            QThreadPool.globalInstance().start(runnable)
+
         except CVRPException as exc:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
