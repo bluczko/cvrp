@@ -1,5 +1,5 @@
 class CVRPException(Exception):
-    message = "Problem niemożliwy do rozwiązania."
+    message = "Problem nie ma rozwiązania rozwiązania."
 
 
 class NoClientsException(CVRPException):

@@ -1,11 +1,16 @@
 import sys
+import os
+from datetime import datetime
+import webbrowser
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
 from cvrp.data import Network, Place, Vehicle
 from cvrp.exceptions import CVRPException
-from cvrp.model import get_solvers, solve_model, CVRPModel
+from cvrp.model import CVRPModel
+from cvrp.report import generate_report
+from cvrp.solver import get_solvers, solve_model
 from cvrp.ui.places import PlaceFormWindow
 from cvrp.ui.vehicles import VehicleFormWindow
 
@@ -194,22 +199,46 @@ class MainTabWidget(QTabWidget):
 
 
 class ModelSolveRunnable(QRunnable):
-    def __init__(self, progress_bar, network):
+    def __init__(self, network, progress_bar):
         super().__init__()
-        self.bar = progress_bar
         self.network = network
+        self.bar = progress_bar
+        self.progress = 0
 
-    def set_bar_value(self, value: int):
+    def set_bar_status(self, value: int, label: str):
         QMetaObject.invokeMethod(self.bar, "setValue", Qt.QueuedConnection, Q_ARG(int, value))
+        QMetaObject.invokeMethod(self.bar, "setLabelText", Qt.QueuedConnection, Q_ARG(str, label))
 
     def run(self):
-        self.set_bar_value(0)
+        try:
+            self.set_bar_status(self.progress, "Konstruowanie modelu...")
+            model = CVRPModel(self.network)
 
-        model = CVRPModel(self.network)
-        self.set_bar_value(1)
+            self.set_bar_status(1, "Szukanie rozwiązania...")
+            result = solve_model(model)
 
-        solve_model(model)
-        self.set_bar_value(2)
+            self.set_bar_status(2, "Generowanie raportu...")
+
+            report = generate_report(model, result)
+            file_name = "raport-"+datetime.now().strftime('%Y-%m-%d_%H.%M.%S')+".html"
+            home = os.path.expanduser("~")
+
+            abs_file_path = os.path.join(home, file_name)
+
+            with open(abs_file_path, "w") as file:
+                file.write(report)
+
+            webbrowser.open(abs_file_path)
+
+            QThread.msleep(500)
+        except CVRPException as exc:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setWindowTitle("Błąd")
+            msg.setText(exc.message)
+            msg.exec_()
+        finally:
+            self.bar.close()
 
 
 class MainWidget(QWidget):
@@ -219,11 +248,12 @@ class MainWidget(QWidget):
         try:
             self._network.check_solvability()
 
-            dialog = QProgressDialog("Rozwiązywanie problemu...", "", 0, 2, self)
+            dialog = QProgressDialog("", "Anuluj", 0, 3, self)
+            dialog.setWindowTitle("Rozwiązywanie problemu")
             dialog.setWindowModality(Qt.WindowModal)
             dialog.show()
 
-            runnable = ModelSolveRunnable(dialog, self._network)
+            runnable = ModelSolveRunnable(self._network, dialog)
             QThreadPool.globalInstance().start(runnable)
 
         except CVRPException as exc:
@@ -252,8 +282,11 @@ class MainWidget(QWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, *args, **kwargs):
-        self._network = kwargs.pop("network", Network())
+    def __init__(self, network: Network = None, *args, **kwargs):
+        if network is None:
+            network = Network()
+
+        self._network = network
 
         super(MainWindow, self).__init__(*args, **kwargs)
 
@@ -264,9 +297,12 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.main_widget)
 
 
-def launch_ui():
+def launch_ui(network: Network = None):
+    if network is None:
+        network = Network()
+
     app = QApplication(sys.argv)
-    main = MainWindow()
+    main = MainWindow(network=network)
 
     try:
         get_solvers()

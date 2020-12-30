@@ -141,6 +141,13 @@ class Network:
         if client in self.__clients:
             self.__clients.remove(client)
 
+    def get_place(self, slug_name):
+        for place in self.all_places:
+            if place.slug_name == slug_name:
+                return place
+
+        return None
+
     def add_vehicle(self, vehicle: Vehicle):
         if vehicle not in self.__vehicles:
             self.__vehicles.append(vehicle)
@@ -148,6 +155,13 @@ class Network:
     def remove_vehicle(self, vehicle: Vehicle):
         if vehicle in self.__vehicles:
             self.__vehicles.remove(vehicle)
+
+    def get_vehicle(self, slug_name):
+        for vehicle in self.vehicles:
+            if vehicle.slug_name == slug_name:
+                return vehicle
+
+        return None
 
     def check_solvability(self):
         if len(self.clients) == 0:

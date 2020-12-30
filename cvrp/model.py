@@ -1,53 +1,62 @@
 from itertools import combinations
 from pyomo.environ import *
-from pyomo.opt import SolverFactory, check_available_solvers
 
 from cvrp.data import Network, Place
 
 
 class CVRPModel(ConcreteModel):
-    def __init__(self, network: Network):
+    def __init__(self, network: Network, auto_init=True):
         super(CVRPModel, self).__init__()
-
         self.network = network
 
-        # Sets definitons #####################################
+        if auto_init:
+            self.init_data()
 
-        self.clients = Set(initialize=[p.slug_name for p in network.clients], doc="Clients")
-        self.places = Set(initialize=[p.slug_name for p in network.all_places], doc="Depot and clients")
-        self.vehicles = Set(initialize=[v.slug_name for v in network.vehicles], doc="Available vehicles")
+    def init_data(self):
+        self._init_sets()
+        self._init_parameters()
+        self._init_variables()
+        self._init_constraints()
+        self._init_objective()
 
-        # Parameters definitons #####################################
+    def _init_sets(self):
+        self.clients = Set(initialize=[p.slug_name for p in self.network.clients], doc="Clients")
+        self.places = Set(initialize=[p.slug_name for p in self.network.all_places], doc="Depot and clients")
+        self.vehicles = Set(initialize=[v.slug_name for v in self.network.vehicles], doc="Available vehicles")
 
+    def _init_parameters(self):
         self.d = Param(
             self.places,
-            initialize={p.slug_name: p.demand for p in network.all_places},
+            initialize={p.slug_name: p.demand for p in self.network.all_places},
             doc="All places demands (including depot.demand=0)"
         )
 
         self.q = Param(
             self.vehicles,
-            initialize={v.slug_name: v.max_capacity for v in network.vehicles},
+            initialize={v.slug_name: v.max_capacity for v in self.network.vehicles},
             doc="Vehicle maximum capacities"
         )
 
         # flattened distance matrix in form: {(from, to): distance}
-        distance_map = {}
+        dist_map = {}
 
         # NOTE: distances are assumed to be symmetrical,
         # meaning: dist(a, b) == dist(b, a)
-        for p_a in network.all_places:
-            for p_b in network.all_places:
-                distance_map[(p_a.slug_name, p_b.slug_name)] = Place.distance(p_a, p_b)
+        for p_a in self.network.all_places:
+            i = p_a.slug_name
+
+            for p_b in self.network.all_places:
+                j = p_b.slug_name
+
+                dist_map[(i, j)] = Place.distance(p_a, p_b)
 
         self.c = Param(
             self.places, self.places,
-            initialize=distance_map,
+            initialize=dist_map,
             doc="Travel costs matrix"
         )
 
-        # Variables definiton #####################################
-
+    def _init_variables(self):
         # noinspection PyUnresolvedReferences
         self.x = Var(
             self.places, self.places, self.vehicles,
@@ -55,36 +64,41 @@ class CVRPModel(ConcreteModel):
             doc="1 if taken route from i-th to j-th place taken by k-th vehicle, 0 otherwise"
         )
 
-        # Model objective function definiton #####################################
-
-        def total_cost(mdl):
-            return sum(
-                mdl.c[i, j] * mdl.x[i, j, k]
-                for i in mdl.places
-                for j in mdl.places if j != i
-                for k in mdl.vehicles
-            )
-
+    def _init_objective(self):
         self.obj_total_cost = Objective(
-            rule=total_cost, sense=minimize,
+            sense=minimize,
+            expr=sum(
+                self.c[i, j] * self.x[i, j, k]
+                for i in self.places
+                for j in self.places if j != i
+                for k in self.vehicles
+            ),
             doc="Minimize total cost of routes taken by vehicles"
         )
 
-        # Model constraints definitons #####################################
-
+    def _init_constraints(self):
         self.con_cl_vh_serve = ConstraintList(doc="Each client must be served by exactly one vehicle")
 
         for j in self.clients:
             self.con_cl_vh_serve.add(
-                sum(self.x[i, j, k] for i in self.places for k in self.vehicles) == 1
+                sum(
+                    self.x[i, j, k]
+                    for i in self.places
+                    for k in self.vehicles
+                ) == 1
             )
 
         self.con_vh_depot = ConstraintList(doc="Each vehicle must leave central depot exactly once")
 
-        _dpt = network.depot.slug_name
+        _dpt = self.network.depot.slug_name
 
         for k in self.vehicles:
-            self.con_vh_depot.add(sum(self.x[_dpt, j, k] for j in self.clients) == 1)
+            self.con_vh_depot.add(
+                sum(
+                    self.x[_dpt, j, k]
+                    for j in self.clients
+                ) == 1
+            )
 
         self.con_route_cycle = ConstraintList(
             doc="Sum of arrivals and departures must be equal for each vehicle (ergo: route must be a cycle)"
@@ -103,10 +117,14 @@ class CVRPModel(ConcreteModel):
 
         for k in self.vehicles:
             self.con_max_load.add(
-                sum(self.d[j] * self.x[i, j, k] for i in self.places for j in self.clients if j != i) <= self.q[k]
+                sum(
+                    self.d[j] * self.x[i, j, k]
+                    for i in self.places
+                    for j in self.clients if j != i
+                ) <= self.q[k]
             )
 
-        clients_num = len(network.clients)
+        clients_num = len(self.network.clients)
 
         self.con_subtours = ConstraintList(
             doc="Subtour elimination - ensures no cycles disconnected from depot"
@@ -123,7 +141,7 @@ class CVRPModel(ConcreteModel):
                     ) <= len(s) - 1
                 )
 
-    def results(self):
+    def vehicle_routes(self):
         # Get depot name
         _depot = self.network.depot.slug_name
 
@@ -167,22 +185,3 @@ class CVRPModel(ConcreteModel):
             vehicle_vars[vehicle] = sorted_list
 
         return vehicle_vars
-
-
-def get_solvers(solvers_tried: [str] = None):
-    # Supply default argument
-    if not solvers_tried:
-        solvers_tried = ["gurobi", "cplex", "glpk"]
-
-    available_solvers = check_available_solvers(*solvers_tried)
-
-    if len(available_solvers) == 0:
-        raise EnvironmentError("No solvers available")
-
-    return available_solvers
-
-
-def solve_model(model: CVRPModel, solvers_tried: [str] = None):
-    available_solvers = get_solvers(solvers_tried)
-    solver = SolverFactory(available_solvers[0])
-    return solver.solve(model)
