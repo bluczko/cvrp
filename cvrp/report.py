@@ -10,6 +10,7 @@ from pyomo.opt.results import SolverResults, check_optimal_termination
 
 from cvrp.model import CVRPModel
 from cvrp.solver import get_solvers
+from cvrp.data import Place
 
 
 def generate_network_vis(network, routes):
@@ -65,24 +66,42 @@ def generate_report(model: CVRPModel, result: SolverResults):
     # noinspection PyUnresolvedReferences
     def place_rows(ctx):
         depot = ctx.get("network").depot
+        demand_sum = 0
 
         for i, place in enumerate(ctx.get("network").all_places):
             h = "E" if place.longitude > 0 else "W"
             v = "N" if place.latitude > 0 else "S"
 
+            demand_sum += place.demand
+
             yield tr(
                 td(strong(place.name) if place is depot else place.name),
                 td("-" if place is depot else place.demand),
-                td(f"{abs(place.longitude):.4f} {h}, {abs(place.latitude):.4f} {v}")
+                td(f"{abs(place.longitude):.2f} {h}, {abs(place.latitude):.2f} {v}")
             )
+
+        yield tr(
+            td(strong("SUMA")),
+            td(f"{demand_sum:.2f}"),
+            td("-")
+        )
 
     # noinspection PyUnresolvedReferences
     def vehicle_rows(ctx):
+        max_cap_sum = 0
+
         for i, vehicle in enumerate(ctx.get("network").vehicles):
+            max_cap_sum += vehicle.max_capacity
+
             yield tr(
                 td(vehicle.name),
                 td(vehicle.max_capacity),
             )
+
+        yield tr(
+            td(strong("SUMA")),
+            td(f"{max_cap_sum:.2f}")
+        )
 
     # noinspection PyUnresolvedReferences
     def route_vehicles(ctx):
@@ -91,12 +110,26 @@ def generate_report(model: CVRPModel, result: SolverResults):
 
         for vehicle in network.vehicles:
             place_names = ["Wyjazd z magazynu"]
+            vehicle_distance = 0
 
             for vehicle_route in routes[vehicle.slug_name]:
-                place = network.get_place(vehicle_route[1])
-                place_names.append("Powrót do magazynu" if place is network.depot else place.name)
+                place_from = network.get_place(vehicle_route[0])
+                place_dest = network.get_place(vehicle_route[1])
 
-            yield div(h2(vehicle.name + ":"), ol(*[li(name) for name in place_names]))
+                route_name = place_dest.name
+
+                if place_dest is network.depot:
+                    route_name = "Powrót do magazynu"
+
+                distance = Place.distance(place_from, place_dest)
+                vehicle_distance += distance
+
+                place_names.append(f"{route_name} (+ {distance:.2f} km)")
+
+            yield div(
+                h2(f"{vehicle.name} ({vehicle_distance:.2f} km)"),
+                ol(*[li(name) for name in place_names]),
+            )
 
     body_sections = [
         section(
@@ -122,7 +155,8 @@ def generate_report(model: CVRPModel, result: SolverResults):
         body_sections.append(
             section(
                 h2("Wybrane trasy"),
-                div(route_vehicles)
+                div(route_vehicles),
+                p(strong("Całkowita przebyta odległość: "), span(f"{model.obj_total_cost():.2f} km"))
             )
         )
 
