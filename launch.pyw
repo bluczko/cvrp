@@ -17,6 +17,8 @@ if __name__ == "__main__":
 
         network = Network()
 
+        random.seed(42)
+
         network.depot.latitude = 52,
         network.depot.longitude = 20,
 
