@@ -1,18 +1,18 @@
 class CVRPException(Exception):
-    message = "Problem nie ma rozwiązania rozwiązania."
+    message = "The problem has no solution."
 
 
 class NoClientsException(CVRPException):
-    message = "Nie dodano klientów."
+    message = "No clients have been added."
 
 
 class NoVehiclesException(CVRPException):
-    message = "Nie dodano pojazdów."
+    message = "No vehicles have been added."
 
 
 class MaxCapacityOverloadException(CVRPException):
-    message = "Największe zapotrzebowanie klienta jest większe niż największa pojemność pojazdów."
+    message = "The largest client demand exceeds the maximum vehicle capacity."
 
 
 class SumCapacityOverloadException(CVRPException):
-    message = "Całkowite zapotrzebowanie klientów jest większe niż całkowita pojemność pojazdów."
+    message = "The total client demand exceeds the total vehicle capacity."
