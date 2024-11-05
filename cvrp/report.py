@@ -81,7 +81,7 @@ def generate_report(model: CVRPModel, result: SolverResults):
             )
 
         yield tr(
-            td(strong("SUMA")),
+            td(strong("TOTAL")),
             td(f"{demand_sum:.2f}"),
             td("-")
         )
@@ -99,7 +99,7 @@ def generate_report(model: CVRPModel, result: SolverResults):
             )
 
         yield tr(
-            td(strong("SUMA")),
+            td(strong("TOTAL")),
             td(f"{max_cap_sum:.2f}")
         )
 
@@ -109,7 +109,7 @@ def generate_report(model: CVRPModel, result: SolverResults):
         routes = ctx.get("routes")
 
         for vehicle in network.vehicles:
-            place_names = ["Wyjazd z magazynu"]
+            place_names = ["Departure from depot"]
             vehicle_distance = 0
 
             for vehicle_route in routes[vehicle.slug_name]:
@@ -119,7 +119,7 @@ def generate_report(model: CVRPModel, result: SolverResults):
                 route_name = place_dest.name
 
                 if place_dest is network.depot:
-                    route_name = "Powrót do magazynu"
+                    route_name = "Return to depot"
 
                 distance = Place.distance(place_from, place_dest)
                 vehicle_distance += distance
@@ -133,18 +133,18 @@ def generate_report(model: CVRPModel, result: SolverResults):
 
     body_sections = [
         section(
-            h2("Dane wejściowe"),
+            h2("Input Data"),
             div(
-                h3("Miejsca"),
+                h3("Places"),
                 table(
-                    thead(td("Nazwa"), td("Zapotrzebowanie"), td("Położenie geo.")),
+                    thead(td("Name"), td("Demand"), td("Geo Position")),
                     tbody(place_rows)
                 )
             ),
             div(
-                h3("Pojazdy"),
+                h3("Vehicles"),
                 table(
-                    thead(td("Nazwa"), td("Maks. pojemność")),
+                    thead(td("Name"), td("Max Capacity")),
                     tbody(vehicle_rows)
                 )
             ),
@@ -154,15 +154,15 @@ def generate_report(model: CVRPModel, result: SolverResults):
     if check_optimal_termination(result):
         body_sections.append(
             section(
-                h2("Wybrane trasy"),
+                h2("Selected Routes"),
                 div(route_vehicles),
-                p(strong("Całkowita przebyta odległość: "), span(f"{model.obj_total_cost():.2f} km"))
+                p(strong("Total Distance Covered: "), span(f"{model.obj_total_cost():.2f} km"))
             )
         )
 
         body_sections.append(
             section(
-                h2("Wizualizacja"),
+                h2("Visualization"),
                 lambda ctx: img(src=generate_network_vis(ctx.get("network"), ctx.get("routes")))
             )
         )
@@ -171,12 +171,12 @@ def generate_report(model: CVRPModel, result: SolverResults):
         section(
             h2("Solver"),
             div(table(tbody(
-                tr(td(strong("Użyty solver:")), td(get_solvers()[0])),
-                tr(td(strong("Czas rozwiązywania:")), td(result.solver.time)),
+                tr(td(strong("Used Solver:")), td(get_solvers()[0])),
+                tr(td(strong("Solve Time:")), td(result.solver.time)),
                 tr(td(strong("Status:")), td(str(result.solver.status))),
-                tr(td(strong("Stan zakończenia:")), td(str(result.solver.termination_condition))),
-                tr(td(strong("Kod zwrotny:")), td(str(result.solver.return_code))),
-                tr(td(strong("Wiadomość:")), td(str(result.solver.message))),
+                tr(td(strong("Termination Condition:")), td(str(result.solver.termination_condition))),
+                tr(td(strong("Return Code:")), td(str(result.solver.return_code))),
+                tr(td(strong("Message:")), td(str(result.solver.message))),
             ))),
             h2("Problem"),
             div(table(tbody(*[
@@ -188,16 +188,16 @@ def generate_report(model: CVRPModel, result: SolverResults):
 
     template = html(
         head(
-            title("Problem marszrutyzacji - Raport"),
+            title("Route Planning - Report"),
             style(
                 "table, th, td { border: 1px solid black; border-collapse: collapse; }" +
                 "section { margin-left: 2em; }"
             ),
         ),
         body(
-            header(h1("Raport marszrutyzacji")),
+            header(h1("Route Planning Report")),
             *body_sections,
-            footer(hr, f"Wygenerowano: {datetime.now()}"),
+            footer(hr, f"Generated: {datetime.now()}"),
         ),
     )
 

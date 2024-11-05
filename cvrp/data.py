@@ -106,7 +106,7 @@ class Vehicle:
 
 class Network:
     def __init__(self):
-        self.__depot = Place("Magazyn centralny", 0.0, 0.0)
+        self.__depot = Place("Central Warehouse", 0.0, 0.0)
         self.__clients = []
         self.__vehicles = []
 

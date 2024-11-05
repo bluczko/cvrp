@@ -14,15 +14,15 @@ class VehicleFormWidget(QWidget):
 
         self.name_input = QLineEdit()
         self.name_input.setText(self._vehicle.name)
-        self.layout.addRow("Nazwa", self.name_input)
+        self.layout.addRow("Name", self.name_input)
 
         self.max_capacity_input = QDoubleSpinBox()
         self.max_capacity_input.setMinimum(0.1)
         self.max_capacity_input.setSingleStep(0.1)
         self.max_capacity_input.setValue(self._vehicle.max_capacity)
-        self.layout.addRow("Maks. pojemność", self.max_capacity_input)
+        self.layout.addRow("Max Capacity", self.max_capacity_input)
 
-        self.save_button = QPushButton("Zapisz")
+        self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_vehicle)
         self.layout.addWidget(self.save_button)
 
@@ -43,7 +43,7 @@ class VehicleFormWindow(OnCloseCallbackMixin, QMainWindow):
 
         super().__init__(*args, **kwargs)
 
-        self.setWindowTitle("Edytuj pojazd")
+        self.setWindowTitle("Edit Vehicle")
         self.setFixedSize(300, 150)
 
         self.main_widget = VehicleFormWidget(vehicle=self._vehicle)

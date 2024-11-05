@@ -15,29 +15,29 @@ class PlaceFormWidget(QWidget):
 
         self.name_input = QLineEdit()
         self.name_input.setText(self._place.name)
-        self.layout.addRow("Nazwa", self.name_input)
+        self.layout.addRow("Name", self.name_input)
 
         self.lat_input = QDoubleSpinBox()
         self.lat_input.setMinimum(-90.0)
         self.lat_input.setMaximum(90.0)
         self.lat_input.setSingleStep(0.1)
         self.lat_input.setValue(self._place.latitude)
-        self.layout.addRow("Długość geo.", self.lat_input)
+        self.layout.addRow("Latitude", self.lat_input)
 
         self.lng_input = QDoubleSpinBox()
         self.lng_input.setMinimum(-180.0)
         self.lng_input.setMaximum(180.0)
         self.lng_input.setSingleStep(0.1)
         self.lng_input.setValue(self._place.longitude)
-        self.layout.addRow("Szerokość geo.", self.lng_input)
+        self.layout.addRow("Longitude", self.lng_input)
 
         if not self._is_depot:
             self.demand_input = QDoubleSpinBox()
             self.demand_input.setMinimum(0.1)
             self.demand_input.setValue(self._place.demand)
-            self.layout.addRow("Zapotrzebowanie", self.demand_input)
+            self.layout.addRow("Demand", self.demand_input)
 
-        self.save_button = QPushButton("Zapisz")
+        self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_place)
         self.layout.addWidget(self.save_button)
 
@@ -61,7 +61,7 @@ class PlaceFormWindow(OnCloseCallbackMixin, QMainWindow):
 
         super().__init__(*args, **kwargs)
 
-        self.setWindowTitle("Edytuj miejsce")
+        self.setWindowTitle("Edit Place")
         self.setFixedSize(300, 150)
 
         self.main_widget = PlaceFormWidget(place=self._place, is_depot=self._is_depot)

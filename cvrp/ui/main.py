@@ -34,15 +34,15 @@ class ListTabWidget(QWidget):
         self.ab_layout = QHBoxLayout()
         self.action_buttons.setLayout(self.ab_layout)
 
-        self.ab_add = QPushButton("Dodaj")
+        self.ab_add = QPushButton("Add")
         self.ab_add.clicked.connect(self.__add_item)
         self.ab_layout.addWidget(self.ab_add)
 
-        self.ab_edit = QPushButton("Edytuj")
+        self.ab_edit = QPushButton("Edit")
         self.ab_edit.clicked.connect(self.__edit_item)
         self.ab_layout.addWidget(self.ab_edit)
 
-        self.ab_remove = QPushButton("Usuń")
+        self.ab_remove = QPushButton("Remove")
         self.ab_remove.clicked.connect(self.__remove_item)
         self.ab_layout.addWidget(self.ab_remove)
 
@@ -114,7 +114,7 @@ class PlacesTabWidget(ListTabWidget):
 
     def on_item_add(self):
         new_index = len(self._network.clients) + 1
-        new_place = Place(f"Nowy klient ({new_index})", 0.0, 0.0)
+        new_place = Place(f"New Client ({new_index})", 0.0, 0.0)
         self._network.add_client(new_place)
 
         form_window = PlaceFormWindow(self, place=new_place)
@@ -168,7 +168,7 @@ class VehiclesTabWidget(ListTabWidget):
 
     def on_item_add(self):
         new_index = len(self._network.vehicles) + 1
-        new_vehicle = Vehicle(f"Nowy pojazd ({new_index})", 1.0)
+        new_vehicle = Vehicle(f"New Vehicle ({new_index})", 1.0)
         self._network.add_vehicle(new_vehicle)
 
         form_window = VehicleFormWindow(self, vehicle=new_vehicle)
@@ -192,10 +192,10 @@ class MainTabWidget(QTabWidget):
         super(MainTabWidget, self).__init__(*args, **kwargs)
 
         self.places_tab = PlacesTabWidget(self, network=self._network)
-        self.addTab(self.places_tab, "Miejsca")
+        self.addTab(self.places_tab, "Places")
 
         self.vehicles_tab = VehiclesTabWidget(self, network=self._network)
-        self.addTab(self.vehicles_tab, "Pojazdy")
+        self.addTab(self.vehicles_tab, "Vehicles")
 
 
 class ModelSolveRunnable(QRunnable):
@@ -211,16 +211,16 @@ class ModelSolveRunnable(QRunnable):
 
     def run(self):
         try:
-            self.set_bar_status(self.progress, "Konstruowanie modelu...")
+            self.set_bar_status(self.progress, "Building model...")
             model = CVRPModel(self.network)
 
-            self.set_bar_status(1, "Szukanie rozwiązania...")
+            self.set_bar_status(1, "Searching for a solution...")
             result = solve_model(model)
 
-            self.set_bar_status(2, "Generowanie raportu...")
+            self.set_bar_status(2, "Generating report...")
 
             report = generate_report(model, result)
-            file_name = "raport-"+datetime.now().strftime('%Y-%m-%d_%H.%M.%S')+".html"
+            file_name = "report-" + datetime.now().strftime('%Y-%m-%d_%H.%M.%S') + ".html"
             home = os.path.expanduser("~")
 
             abs_file_path = os.path.join(home, file_name)
@@ -234,7 +234,7 @@ class ModelSolveRunnable(QRunnable):
         except CVRPException as exc:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
-            msg.setWindowTitle("Błąd")
+            msg.setWindowTitle("Error")
             msg.setText(exc.message)
             msg.exec_()
         finally:
@@ -248,8 +248,8 @@ class MainWidget(QWidget):
         try:
             self._network.check_solvability()
 
-            dialog = QProgressDialog("", "Anuluj", 0, 3, self)
-            dialog.setWindowTitle("Rozwiązywanie problemu")
+            dialog = QProgressDialog("", "Cancel", 0, 3, self)
+            dialog.setWindowTitle("Solving Problem")
             dialog.setWindowModality(Qt.WindowModal)
             dialog.show()
 
@@ -259,7 +259,7 @@ class MainWidget(QWidget):
         except CVRPException as exc:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
-            msg.setWindowTitle("Błąd")
+            msg.setWindowTitle("Error")
             msg.setText(exc.message)
             msg.exec_()
 
@@ -276,7 +276,7 @@ class MainWidget(QWidget):
         self.tabs = MainTabWidget(self, network=self._network)
         self.layout.addWidget(self.tabs)
 
-        self.solve = QPushButton("Rozwiąż problem")
+        self.solve = QPushButton("Solve Problem")
         self.solve.clicked.connect(self.on_click_solve)
         self.layout.addWidget(self.solve)
 
@@ -290,7 +290,7 @@ class MainWindow(QMainWindow):
 
         super(MainWindow, self).__init__(*args, **kwargs)
 
-        self.setWindowTitle("Problem marszrutyzacji")
+        self.setWindowTitle("Routing Problem")
         self.setFixedSize(600, 400)
 
         self.main_widget = MainWidget(self, network=self._network)
@@ -303,16 +303,16 @@ def launch_ui(network: Network = None):
 
     app = QApplication(sys.argv)
     main = MainWindow(network=network)
-
     try:
         get_solvers()
     except EnvironmentError:
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Critical)
-        msg.setWindowTitle("Błąd")
-        msg.setText("Brak dostępnych solverów")
+        msg.setWindowTitle("Error")
+        msg.setText("No available solvers")
         msg.exec_()
         return
 
     main.show()
     sys.exit(app.exec())
+
